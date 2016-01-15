@@ -1,47 +1,30 @@
-module Main (..) where
+module Main (main) where
 
-import Html exposing (..)
-import StartApp
-import Signal
-import Markdown
+import Html exposing (Html)
 import Effects exposing (Effects)
+import PhysicsFrame exposing (Model, init, update, view)
+import StartApp exposing (App)
+import Task exposing (Task)
+
+
+app : App Model
+app =
+    StartApp.start
+        { init = init
+        , update = update
+        , view = view
+        , inputs = []
+        }
 
 
 main : Signal Html
 main =
-    .html
-        <| StartApp.start
-            { init = ( init, Effects.none )
-            , update = update
-            , view = view
-            , inputs = []
-            }
+    app.html
 
 
-type alias Action =
-    {}
-
-
-type alias Model =
-    {}
-
-
-init : Model
-init =
-    {}
-
-
-update : Action -> Model -> ( Model, Effects Action )
-update _ _ =
-    ( init, Effects.none )
-
-
-view : Signal.Address Action -> Model -> Html
-view _ _ =
-    main'
-        []
-        [ Markdown.toHtml content
-        ]
+port tasks : Signal (Task Effects.Never ())
+port tasks =
+    app.tasks
 
 
 content : String
