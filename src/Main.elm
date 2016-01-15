@@ -4,6 +4,7 @@ import Html exposing (..)
 import Html.Attributes exposing (href)
 
 
+main : Html
 main =
     main'
         []

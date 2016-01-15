@@ -1,10 +1,10 @@
 {
     "version": "1.0.0",
-    "summary": "helpful summary of your project, less than 80 characters",
-    "repository": "https://github.com/user/project.git",
-    "license": "BSD3",
+    "summary": "The website of the man.",
+    "repository": "https://github.com/nphollon/nickhollon.com.git",
+    "license": "GPLv3",
     "source-directories": [
-        "."
+        "./src"
     ],
     "exposed-modules": [],
     "dependencies": {
