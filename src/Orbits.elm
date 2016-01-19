@@ -43,32 +43,50 @@ init =
     Debug.log "init"
         <| orbital
         <| Dict.fromList
-            [ ( "planetA", [ ( 100, 0 ), ( 50, 200 ) ] )
-            , ( "planetB", [ ( -100, 20 ), ( 0, -200 ) ] )
+            [ ( "planetA", [ ( 100, -2 ), ( 60, 50 ) ] )
+            , ( "planetB", [ ( -100, 50 ), ( 0, -400 ) ] )
             ]
+
+
+masses : Dict String Float
+masses =
+    Dict.fromList [ ( "planetA", 50 ), ( "planetB", 5 ) ]
+
+
+totalMass : Float
+totalMass =
+    Dict.foldl (\_ -> (+)) 0 masses
+
+
+inverseMasses : Dict String Float
+inverseMasses =
+    Dict.map (\_ m -> totalMass - m) masses
 
 
 orbital : Dict String (List ( Float, Float )) -> StateWrapper
 orbital planets =
     let
+        n = toFloat (Dict.size planets)
+
         subtract ( a, b ) ( c, d ) =
             ( a - c, b - d )
 
-        divideBy c ( a, b ) =
-            ( a / c, b / c )
-
-        add ( a, b ) ( c, d ) =
-            ( a + c, b + d )
+        weightAdd m ( x, v ) ( avgX, avgV ) =
+            ( avgX + m * x / totalMass, avgV + m * v / totalMass )
 
         centerOfMass =
-            Dict.foldl (\k -> List.map2 add) [ ( 0, 0 ), ( 0, 0 ) ] planets
-                |> List.map (divideBy (toFloat (Dict.size planets)))
+            Dict.foldl
+                (\k ->
+                    let
+                        mass = Dict.get k masses |> Maybe.withDefault 0
+                    in
+                        List.map2 (weightAdd mass)
+                )
+                [ ( 0, 0 ), ( 0, 0 ) ]
+                planets
 
         normalize coords =
-            List.map2
-                (\( x, v ) ( x0, v0 ) -> ( x - x0, v - v0 ))
-                coords
-                centerOfMass
+            List.map2 subtract coords centerOfMass
 
         polarize coords =
             case List.take 2 coords of
@@ -122,11 +140,12 @@ time =
 evolve : Float -> Model -> Model
 evolve dt model =
     let
-        -- assumes two planets are of the same mass
-        gravity = 5000000.0
+        gravity = 500000.0
 
         accel key s =
             let
+                invMass = Dict.get key inverseMasses |> Maybe.withDefault 1
+
                 sw = { model | state = s }
 
                 radius = coordinate key 0 sw
@@ -134,8 +153,10 @@ evolve dt model =
                 radSpeed = velocity key 0 sw
 
                 rotSpeed = velocity key 1 sw
+
+                separation = radius * totalMass / invMass
             in
-                [ (radius * rotSpeed ^ 2) - (gravity * radius ^ -2)
+                [ (radius * rotSpeed ^ 2) - (2 * gravity * invMass * separation ^ -2)
                 , -2 * radSpeed * rotSpeed / radius
                 ]
 
@@ -158,11 +179,13 @@ draw model =
     let
         ball key =
             let
+                mass = sqrt (Dict.get key masses |> Maybe.withDefault 0)
+
                 radius = coordinate key 0 model
 
                 angle = coordinate key 1 model
             in
-                Collage.circle 10
+                Collage.circle mass
                     |> Collage.filled Color.blue
                     |> Collage.move (fromPolar ( radius, angle ))
 
