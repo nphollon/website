@@ -41,19 +41,51 @@ initialize dataDict =
 init : StateWrapper
 init =
     Debug.log "init"
-        <| initialize
+        <| orbital
         <| Dict.fromList
-            [ ( "centerOfMass", [ ( 0, 0 ), ( 0, 0 ) ] )
-            , ( "planetA", [ ( 100, 0 ), ( degrees 0, 2 ) ] )
-            , ( "planetB", [ ( 100, 0 ), ( degrees 180, 2 ) ] )
+            [ ( "planetA", [ ( 100, 0 ), ( 50, 200 ) ] )
+            , ( "planetB", [ ( -100, 20 ), ( 0, -200 ) ] )
             ]
 
 
-wrap : Mechanics.State -> Dict String { position : Int, size : Int } -> StateWrapper
-wrap state keys =
-    { state = state
-    , keys = keys
-    }
+orbital : Dict String (List ( Float, Float )) -> StateWrapper
+orbital planets =
+    let
+        subtract ( a, b ) ( c, d ) =
+            ( a - c, b - d )
+
+        divideBy c ( a, b ) =
+            ( a / c, b / c )
+
+        add ( a, b ) ( c, d ) =
+            ( a + c, b + d )
+
+        centerOfMass =
+            Dict.foldl (\k -> List.map2 add) [ ( 0, 0 ), ( 0, 0 ) ] planets
+                |> List.map (divideBy (toFloat (Dict.size planets)))
+
+        normalize coords =
+            List.map2
+                (\( x, v ) ( x0, v0 ) -> ( x - x0, v - v0 ))
+                coords
+                centerOfMass
+
+        polarize coords =
+            case List.take 2 coords of
+                ( x, vx ) :: (( y, vy ) :: []) ->
+                    let
+                        ( r, phi ) = toPolar ( x, y )
+                    in
+                        [ ( r, (vx * x + vy * y) / r )
+                        , ( phi, (vy * x - vx * y) / r ^ 2 )
+                        ]
+
+                _ ->
+                    []
+    in
+        Dict.map (\k v -> polarize (normalize v)) planets
+            |> Dict.insert "centerOfMass" centerOfMass
+            |> initialize
 
 
 coordinate : String -> Int -> StateWrapper -> Float
@@ -80,6 +112,11 @@ velocity key index { state, keys } =
 
         Nothing ->
             0
+
+
+time : StateWrapper -> Float
+time =
+    .state >> Mechanics.time
 
 
 evolve : Float -> Model -> Model
@@ -129,13 +166,22 @@ draw model =
                     |> Collage.filled Color.blue
                     |> Collage.move (fromPolar ( radius, angle ))
 
-        origin =
-            Collage.circle 2 |> Collage.outlined Collage.defaultLine
+        circle =
+            Collage.circle >> Collage.outlined (Collage.dashed Color.grey)
+
+        reference key =
+            let
+                x = coordinate key 0 model
+
+                y = coordinate key 1 model
+            in
+                Collage.group [ circle 2, circle 100, circle 300 ]
+                    |> Collage.move ( -x, -y )
     in
         Collage.collage
             500
             500
-            [ origin
+            [ reference "centerOfMass"
             , ball "planetA"
             , ball "planetB"
             ]
