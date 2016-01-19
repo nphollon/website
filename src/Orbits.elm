@@ -43,8 +43,8 @@ init =
     Debug.log "init"
         <| orbital
         <| Dict.fromList
-            [ ( "planetA", [ ( 100, -2 ), ( 60, 50 ) ] )
-            , ( "planetB", [ ( -100, 50 ), ( 0, -400 ) ] )
+            [ ( "planetA", [ ( 0, 0 ), ( 0, 40 ) ] )
+            , ( "planetB", [ ( -200, 0 ), ( 0, -400 ) ] )
             ]
 
 
@@ -177,34 +177,40 @@ view model =
 draw : Model -> Element
 draw model =
     let
-        ball key =
+        planet key =
             let
-                mass = sqrt (Dict.get key masses |> Maybe.withDefault 0)
+                mass = sqrt (Dict.get key masses |> Maybe.withDefault 0) * 2
 
                 radius = coordinate key 0 model
 
                 angle = coordinate key 1 model
+
+                radSpeed = velocity key 0 model
+
+                rotSpeed = velocity key 1 model
+
+                scale = 5
             in
-                Collage.circle mass
-                    |> Collage.filled Color.blue
+                Collage.group
+                    [ Collage.filled Color.blue (Collage.circle mass)
+                    , Collage.segment
+                        ( 0, 0 )
+                        ( radSpeed / scale, radius * rotSpeed / scale )
+                        |> Collage.traced (Collage.dotted Color.black)
+                        |> Collage.rotate angle
+                    ]
                     |> Collage.move (fromPolar ( radius, angle ))
 
         circle =
             Collage.circle >> Collage.outlined (Collage.dashed Color.grey)
 
-        reference key =
-            let
-                x = coordinate key 0 model
-
-                y = coordinate key 1 model
-            in
-                Collage.group [ circle 2, circle 100, circle 300 ]
-                    |> Collage.move ( -x, -y )
+        reference =
+            Collage.group [ circle 50, circle 150, circle 250 ]
     in
         Collage.collage
             500
             500
-            [ reference "centerOfMass"
-            , ball "planetA"
-            , ball "planetB"
+            [ reference
+            , planet "planetA"
+            , planet "planetB"
             ]
