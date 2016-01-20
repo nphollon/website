@@ -53,7 +53,7 @@ firstEntry =
     Markdown.toHtml """
 # January 19, 2016
 
-Here is an example built using _nphollon/mechanics_. A moon orbits a planet ten times its mass. The solid gray lines represent the velocities of the two objects (the longer the line, the faster the objects is moving). The dashed circles are just for reference so that you can see that the orbit is not circular.
+Here is an example built using _nphollon/mechanics_. A moon orbits a planet ten times its mass. The solid gray lines represent the velocities of the two objects (the longer the line, the faster the object is moving). The dashed circles are just for reference so that you can see that the orbit is not circular.
 
 This is the first example I've built since updating the library to version 3. The library is extremely low-level at this point (I had to compute the accelerations by hand). Writing this gave me a lot of ideas for making it both more usable and more powerful.
 """
