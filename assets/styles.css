@@ -1,9 +1,47 @@
+@font-face {
+    font-family: 'Triplicate';
+    src: url('triplicate_t4_poly_regular-webfont.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
+
+}
+
+@font-face {
+    font-family: 'Triplicate';
+    src: url('triplicate_t4_poly_italic-webfont.woff') format('woff');
+    font-weight: normal;
+    font-style: italic;
+
+}
+
+@font-face {
+    font-family: 'Triplicate';
+    src: url('triplicate_t4_poly_bold-webfont.woff') format('woff');
+    font-weight: bold;
+    font-style: normal;
+
+}
+
 body {
-  font: 16px Alegreya Sans, sans-serif;
+  font: 20px Alegreya Sans, sans-serif;
   color: #222;
   margin-left: 20%;
   padding: 0;
-  background: #d3d3dd;
+  max-width: 1000px;
+  min-width: 520px;
+}
+
+main {
+  margin-left: 8em;
+  margin-right: 11em;
+
+}
+
+header {
+    font-style: italic;
+    font-family: Triplicate, serif;
+    font-size: 2.3em;
+    margin-bottom: 1.3em;
 }
 
 h1, 
@@ -12,16 +50,13 @@ h3,
 h4,
 h5,
 h6 {
-  font-weight: bold;
-  margin-bottom: 1em;
-  font-family: Alegreya Sans, sans-serif;
+  font-style: italic;
+  font-weight: normal;
+  margin-top: 1em;
+  font-family: Triplicate, serif;
 }
 
 h1 {
-  font-size: 2.1em;
-}
-
-h2 {
   font-size: 1.5em;
 }
 

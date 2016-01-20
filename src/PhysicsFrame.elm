@@ -52,18 +52,23 @@ update action model =
 
 tick : Time -> Model -> Model
 tick clockTime model =
-    case model.prevClockTime of
-        Just prevClockTime ->
-            let
-                dt = Time.inSeconds (clockTime - prevClockTime)
-            in
-                { model
-                    | state = Orbits.evolve dt model.state
-                    , prevClockTime = Just clockTime
-                }
+    let
+        withUpdatedTime =
+            { model
+                | prevClockTime = Just clockTime
+            }
+    in
+        case model.prevClockTime of
+            Just prevClockTime ->
+                let
+                    dt = Time.inSeconds (clockTime - prevClockTime)
+                in
+                    { withUpdatedTime
+                        | state = Orbits.evolve dt model.state
+                    }
 
-        Nothing ->
-            { model | prevClockTime = Just clockTime }
+            Nothing ->
+                withUpdatedTime
 
 
 view : Signal.Address Action -> Model -> Html

@@ -210,8 +210,8 @@ draw model =
             Collage.group [ circle 30, circle 90, circle 150 ]
     in
         Collage.collage
-            300
-            300
+            400
+            400
             [ reference
             , planet "planetA"
             , planet "planetB"
