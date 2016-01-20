@@ -4,7 +4,8 @@
     "repository": "https://github.com/nphollon/nickhollon.com.git",
     "license": "GPLv3",
     "source-directories": [
-        "./src"
+        "./src",
+        "./mechanics/src"
     ],
     "exposed-modules": [],
     "dependencies": {
@@ -12,8 +13,7 @@
         "evancz/elm-effects": "2.0.1 <= v < 3.0.0",
         "evancz/elm-html": "4.0.2 <= v < 5.0.0",
         "evancz/elm-markdown": "2.0.0 <= v < 3.0.0",
-        "evancz/start-app": "2.0.2 <= v < 3.0.0",
-        "nphollon/mechanics": "3.1.0 <= v < 4.0.0"
+        "evancz/start-app": "2.0.2 <= v < 3.0.0"
     },
     "elm-version": "0.16.0 <= v < 0.17.0"
 }
