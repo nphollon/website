@@ -1,7 +1,6 @@
 module Orbits (Model, init, evolve, view) where
 
 import Graphics.Collage as Collage
-import Graphics.Element as Element exposing (Element)
 import Color
 import Dict exposing (Dict)
 import Html exposing (..)
@@ -18,17 +17,33 @@ type alias StateWrapper =
     }
 
 
-initialize : Dict String (List ( Float, Float )) -> StateWrapper
+type alias PointData =
+    { position : Vector
+    , velocity : Vector
+    , mass : Float
+    }
+
+
+type alias Vector =
+    { x : Float, y : Float }
+
+
+vector : Float -> Float -> Vector
+vector x y =
+    { x = x, y = y }
+
+
+initialize : Dict String PointData -> StateWrapper
 initialize dataDict =
     let
+        toList { mass, position, velocity } =
+            [ ( position.x, velocity.x ), ( position.y, velocity.y ) ]
+
         append key data { i, state, keys } =
-            let
-                size = List.length data
-            in
-                { i = i + size
-                , state = state ++ data
-                , keys = Dict.insert key { position = i, size = size } keys
-                }
+            { i = i + 2
+            , state = state ++ toList data
+            , keys = Dict.insert key { position = i, size = 2 } keys
+            }
 
         flattened =
             Dict.foldl append { i = 0, state = [], keys = Dict.empty } dataDict
@@ -36,74 +51,6 @@ initialize dataDict =
         { state = Mechanics.state 0 flattened.state
         , keys = flattened.keys
         }
-
-
-init : StateWrapper
-init =
-    Debug.log "init"
-        <| orbital
-        <| Dict.fromList
-            [ ( "planetA", [ ( 0, 0 ), ( 0, 40 ) ] )
-            , ( "planetB", [ ( -200, 0 ), ( 0, -400 ) ] )
-            ]
-
-
-masses : Dict String Float
-masses =
-    Dict.fromList [ ( "planetA", 50 ), ( "planetB", 5 ) ]
-
-
-totalMass : Float
-totalMass =
-    Dict.foldl (\_ -> (+)) 0 masses
-
-
-inverseMasses : Dict String Float
-inverseMasses =
-    Dict.map (\_ m -> totalMass - m) masses
-
-
-orbital : Dict String (List ( Float, Float )) -> StateWrapper
-orbital planets =
-    let
-        n = toFloat (Dict.size planets)
-
-        subtract ( a, b ) ( c, d ) =
-            ( a - c, b - d )
-
-        weightAdd m ( x, v ) ( avgX, avgV ) =
-            ( avgX + m * x / totalMass, avgV + m * v / totalMass )
-
-        centerOfMass =
-            Dict.foldl
-                (\k ->
-                    let
-                        mass = Dict.get k masses |> Maybe.withDefault 0
-                    in
-                        List.map2 (weightAdd mass)
-                )
-                [ ( 0, 0 ), ( 0, 0 ) ]
-                planets
-
-        normalize coords =
-            List.map2 subtract coords centerOfMass
-
-        polarize coords =
-            case List.take 2 coords of
-                ( x, vx ) :: (( y, vy ) :: []) ->
-                    let
-                        ( r, phi ) = toPolar ( x, y )
-                    in
-                        [ ( r, (vx * x + vy * y) / r )
-                        , ( phi, (vy * x - vx * y) / r ^ 2 )
-                        ]
-
-                _ ->
-                    []
-    in
-        Dict.map (\k v -> polarize (normalize v)) planets
-            |> Dict.insert "centerOfMass" centerOfMass
-            |> initialize
 
 
 coordinate : String -> Int -> StateWrapper -> Float
@@ -135,6 +82,123 @@ velocity key index { state, keys } =
 time : StateWrapper -> Float
 time =
     .state >> Mechanics.time
+
+
+centerOfMass : List PointData -> PointData
+centerOfMass planets =
+    let
+        weightedSum planet center =
+            { mass =
+                center.mass + planet.mass
+            , position =
+                add center.position (scale planet.mass planet.position)
+            , velocity =
+                add center.velocity (scale planet.mass planet.velocity)
+            }
+
+        divideByMass center =
+            { center
+                | position = scale (1 / center.mass) center.position
+                , velocity = scale (1 / center.mass) center.velocity
+            }
+
+        defaultCenter =
+            { mass = 0, position = vector 0 0, velocity = vector 0 0 }
+    in
+        List.foldl weightedSum defaultCenter planets
+            |> divideByMass
+
+
+masses : Dict String Float
+masses =
+    Dict.fromList [ ( "planetA", 50 ), ( "planetB", 5 ) ]
+
+
+totalMass : Float
+totalMass =
+    Dict.foldl (\_ -> (+)) 0 masses
+
+
+inverseMasses : Dict String Float
+inverseMasses =
+    Dict.map (\_ m -> totalMass - m) masses
+
+
+add : Vector -> Vector -> Vector
+add a b =
+    { x = a.x + b.x
+    , y = a.y + b.y
+    }
+
+
+subtract : Vector -> Vector -> Vector
+subtract a b =
+    { x = a.x - b.x
+    , y = a.y - b.y
+    }
+
+
+scale : Float -> Vector -> Vector
+scale c v =
+    { x = v.x * c
+    , y = v.y * c
+    }
+
+
+recenter : PointData -> PointData -> PointData
+recenter origin object =
+    { object
+        | position = subtract object.position origin.position
+        , velocity = subtract object.velocity origin.velocity
+    }
+
+
+polarize : PointData -> PointData
+polarize { position, velocity, mass } =
+    let
+        ( r, phi ) = toPolar ( position.x, position.y )
+    in
+        { position = { x = r, y = phi }
+        , velocity =
+            { x = (velocity.x * position.x + velocity.y * position.y) / r
+            , y = (velocity.y * position.x - velocity.x * position.y) / r ^ 2
+            }
+        , mass = mass
+        }
+
+
+
+------------------------------------------------------------------
+
+
+init : StateWrapper
+init =
+    Debug.log "init"
+        <| orbital
+        <| Dict.fromList
+            [ ( "planetA"
+              , { position = vector 0 0
+                , velocity = vector 0 40
+                , mass = 50
+                }
+              )
+            , ( "planetB"
+              , { position = vector -200 0
+                , velocity = vector 0 -400
+                , mass = 5
+                }
+              )
+            ]
+
+
+orbital : Dict String PointData -> StateWrapper
+orbital planets =
+    let
+        origin = centerOfMass (Dict.values planets)
+    in
+        Dict.map (\_ -> recenter origin >> polarize) planets
+            |> Dict.insert "centerOfMass" origin
+            |> initialize
 
 
 evolve : Float -> Model -> Model
@@ -171,11 +235,6 @@ evolve dt model =
 
 view : Model -> Html
 view model =
-    fromElement (draw model |> Element.color Color.white)
-
-
-draw : Model -> Element
-draw model =
     let
         planet key =
             let
@@ -216,3 +275,4 @@ draw model =
             , planet "planetA"
             , planet "planetB"
             ]
+            |> Html.fromElement
