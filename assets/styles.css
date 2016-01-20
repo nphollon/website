@@ -1,5 +1,5 @@
 body {
-  font: 13px/1.2 Alegreya Sans, sans-serif;
+  font: 16px Alegreya Sans, sans-serif;
   color: #222;
   margin-left: 20%;
   padding: 0;
@@ -18,17 +18,13 @@ h6 {
 }
 
 h1 {
-  font-size: 36px;
+  font-size: 2.1em;
 }
 
 h2 {
-  font-size: 24px;
+  font-size: 1.5em;
 }
 
-h3 {
-  font-size: 16px;
-}
-
-h4 {
-  font-size: 13px;
+p {
+    font-size: 1em;
 }

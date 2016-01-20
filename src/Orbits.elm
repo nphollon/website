@@ -179,24 +179,26 @@ draw model =
     let
         planet key =
             let
-                mass = sqrt (Dict.get key masses |> Maybe.withDefault 0) * 2
+                mass = sqrt (Dict.get key masses |> Maybe.withDefault 0)
 
-                radius = coordinate key 0 model
+                rScale = 0.8
+
+                vScale = 0.15
+
+                radius = rScale * coordinate key 0 model
 
                 angle = coordinate key 1 model
 
-                radSpeed = velocity key 0 model
+                radSpeed = vScale * velocity key 0 model
 
-                rotSpeed = velocity key 1 model
-
-                scale = 5
+                rotSpeed = vScale * velocity key 1 model
             in
                 Collage.group
                     [ Collage.filled Color.blue (Collage.circle mass)
                     , Collage.segment
                         ( 0, 0 )
-                        ( radSpeed / scale, radius * rotSpeed / scale )
-                        |> Collage.traced (Collage.dotted Color.black)
+                        ( radSpeed, radius * rotSpeed )
+                        |> Collage.traced (Collage.solid Color.darkGrey)
                         |> Collage.rotate angle
                     ]
                     |> Collage.move (fromPolar ( radius, angle ))
@@ -205,11 +207,11 @@ draw model =
             Collage.circle >> Collage.outlined (Collage.dashed Color.grey)
 
         reference =
-            Collage.group [ circle 50, circle 150, circle 250 ]
+            Collage.group [ circle 30, circle 90, circle 150 ]
     in
         Collage.collage
-            500
-            500
+            300
+            300
             [ reference
             , planet "planetA"
             , planet "planetB"
