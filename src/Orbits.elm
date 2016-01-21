@@ -168,6 +168,21 @@ type alias Rules =
     Dict String (StateWrapper -> Vector)
 
 
+toAcceleration : Rules -> StateWrapper -> Mechanics.Acceleration
+toAcceleration rules wrapper =
+    Mechanics.acceleration
+        (\s ->
+            let
+                sw = { wrapper | state = s }
+
+                flatten _ accelVector accumulator =
+                    accumulator ++ [ accelVector.x, accelVector.y ]
+            in
+                Dict.map (\_ rule -> rule sw) rules
+                    |> Dict.foldl flatten []
+        )
+
+
 
 ------------------------------------------------------------------
 
@@ -206,13 +221,11 @@ evolve dt model =
     let
         gravity = 500000.0
 
-        accel key s =
+        accel key sw =
             let
-                totMass = totalMass model
+                totMass = totalMass sw
 
-                invMass = totMass - (mass key model)
-
-                sw = { model | state = s }
+                invMass = totMass - mass key sw
 
                 radius = coordinate key 0 sw
 
@@ -222,16 +235,22 @@ evolve dt model =
 
                 separation = radius * totMass / invMass
             in
-                [ (radius * rotSpeed ^ 2) - (2 * gravity * invMass * separation ^ -2)
-                , -2 * radSpeed * rotSpeed / radius
-                ]
+                vector
+                    ((radius * rotSpeed ^ 2) - (2 * gravity * invMass * separation ^ -2))
+                    (-2 * radSpeed * rotSpeed / radius)
 
-        totalAccel s =
-            (accel "planetA" s) ++ (accel "planetB" s)
+        acceleration =
+            toAcceleration
+                (Dict.fromList
+                    [ ( "planetA", accel "planetA" )
+                    , ( "planetB", accel "planetB" )
+                    ]
+                )
+                model
     in
         { model
             | state =
-                Mechanics.evolve (Mechanics.acceleration totalAccel) dt model.state
+                Mechanics.evolve acceleration dt model.state
         }
 
 
