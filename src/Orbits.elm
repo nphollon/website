@@ -13,7 +13,8 @@ type alias Model =
 
 type alias StateWrapper =
     { state : Mechanics.State
-    , keys : Dict String { position : Int, size : Int }
+    , indexes : Dict String Int
+    , masses : Dict String Float
     }
 
 
@@ -36,29 +37,30 @@ vector x y =
 initialize : Dict String PointData -> StateWrapper
 initialize dataDict =
     let
-        toList { mass, position, velocity } =
+        toList { position, velocity } =
             [ ( position.x, velocity.x ), ( position.y, velocity.y ) ]
 
-        append key data { i, state, keys } =
+        append key data { i, state, indexes } =
             { i = i + 2
             , state = state ++ toList data
-            , keys = Dict.insert key { position = i, size = 2 } keys
+            , indexes = Dict.insert key i indexes
             }
 
         flattened =
-            Dict.foldl append { i = 0, state = [], keys = Dict.empty } dataDict
+            Dict.foldl append { i = 0, state = [], indexes = Dict.empty } dataDict
     in
         { state = Mechanics.state 0 flattened.state
-        , keys = flattened.keys
+        , indexes = flattened.indexes
+        , masses = Dict.map (\_ -> .mass) dataDict
         }
 
 
 coordinate : String -> Int -> StateWrapper -> Float
-coordinate key index { state, keys } =
-    case Dict.get key keys of
-        Just { position, size } ->
-            if index < size then
-                Mechanics.coordinate (position + index) state
+coordinate key i { state, indexes } =
+    case Dict.get key indexes of
+        Just offset ->
+            if i < 2 then
+                Mechanics.coordinate (offset + i) state
             else
                 0
 
@@ -67,16 +69,26 @@ coordinate key index { state, keys } =
 
 
 velocity : String -> Int -> StateWrapper -> Float
-velocity key index { state, keys } =
-    case Dict.get key keys of
-        Just { position, size } ->
-            if index < size then
-                Mechanics.velocity (position + index) state
+velocity key i { state, indexes } =
+    case Dict.get key indexes of
+        Just offset ->
+            if i < 2 then
+                Mechanics.velocity (offset + i) state
             else
                 0
 
         Nothing ->
             0
+
+
+mass : String -> StateWrapper -> Float
+mass key { masses } =
+    Dict.get key masses |> Maybe.withDefault 0
+
+
+totalMass : StateWrapper -> Float
+totalMass =
+    .masses >> Dict.foldl (\_ -> (+)) 0
 
 
 time : StateWrapper -> Float
@@ -107,21 +119,6 @@ centerOfMass planets =
     in
         List.foldl weightedSum defaultCenter planets
             |> divideByMass
-
-
-masses : Dict String Float
-masses =
-    Dict.fromList [ ( "planetA", 50 ), ( "planetB", 5 ) ]
-
-
-totalMass : Float
-totalMass =
-    Dict.foldl (\_ -> (+)) 0 masses
-
-
-inverseMasses : Dict String Float
-inverseMasses =
-    Dict.map (\_ m -> totalMass - m) masses
 
 
 add : Vector -> Vector -> Vector
@@ -167,6 +164,10 @@ polarize { position, velocity, mass } =
         }
 
 
+type alias Rules =
+    Dict String (StateWrapper -> Vector)
+
+
 
 ------------------------------------------------------------------
 
@@ -197,7 +198,6 @@ orbital planets =
         origin = centerOfMass (Dict.values planets)
     in
         Dict.map (\_ -> recenter origin >> polarize) planets
-            |> Dict.insert "centerOfMass" origin
             |> initialize
 
 
@@ -208,7 +208,9 @@ evolve dt model =
 
         accel key s =
             let
-                invMass = Dict.get key inverseMasses |> Maybe.withDefault 1
+                totMass = totalMass model
+
+                invMass = totMass - (mass key model)
 
                 sw = { model | state = s }
 
@@ -218,14 +220,14 @@ evolve dt model =
 
                 rotSpeed = velocity key 1 sw
 
-                separation = radius * totalMass / invMass
+                separation = radius * totMass / invMass
             in
                 [ (radius * rotSpeed ^ 2) - (2 * gravity * invMass * separation ^ -2)
                 , -2 * radSpeed * rotSpeed / radius
                 ]
 
         totalAccel s =
-            [ 0, 0 ] ++ (accel "planetA" s) ++ (accel "planetB" s)
+            (accel "planetA" s) ++ (accel "planetB" s)
     in
         { model
             | state =
@@ -238,7 +240,7 @@ view model =
     let
         planet key =
             let
-                mass = sqrt (Dict.get key masses |> Maybe.withDefault 0)
+                m = sqrt (mass key model)
 
                 rScale = 0.8
 
@@ -253,7 +255,7 @@ view model =
                 rotSpeed = vScale * velocity key 1 model
             in
                 Collage.group
-                    [ Collage.filled Color.blue (Collage.circle mass)
+                    [ Collage.filled Color.blue (Collage.circle m)
                     , Collage.segment
                         ( 0, 0 )
                         ( radSpeed, radius * rotSpeed )
