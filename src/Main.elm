@@ -1,6 +1,7 @@
 module Main (main) where
 
 import Html exposing (..)
+import Html.Attributes exposing (..)
 import Markdown
 import Effects
 import PhysicsFrame as Phys
@@ -25,37 +26,22 @@ main =
 
 view : Signal.Address Phys.Action -> Phys.Model -> Html
 view address model =
-    main'
-        []
-        [ header [] [ text "Nick Hollon" ]
-        , article [] [ intro ]
-        , article
-            []
-            [ firstEntry
-            , Phys.view address model
-            ]
+    figure (Phys.view address model) description
+
+
+figure : Html -> String -> Html
+figure content label =
+    article
+        [ class "figure" ]
+        [ content
+        , div [ class "figure-label" ] [ Markdown.toHtml label ]
         ]
 
 
-intro : Html
-intro =
-    Markdown.toHtml """
-I am a software developer with a background in physics & astronomy.
-
-My latest project is a [classical mechanics library](http://package.elm-lang.org/packages/nphollon/mechanics/latest) for the [Elm programming language](http://elm-lang.org). Check here for updates and announcements!
-
-You can email me  [here](mailto:contact@nickhollon.com).
-"""
-
-
-firstEntry : Html
-firstEntry =
-    Markdown.toHtml """
-# January 19, 2016
-
-Here is an example built using _nphollon/mechanics_. A moon orbits a planet ten times its mass. The solid gray lines represent the velocities of the two objects (the longer the line, the faster the object is moving). The dashed circles are just for reference so that you can see that the orbit is not circular.
-
-This is the first example I've built since updating the library to version 3. The library is extremely low-level at this point (I had to compute the accelerations by hand). Writing this gave me a lot of ideas for making it both more usable and more powerful.
+description : String
+description =
+    """
+A moon orbits a planet ten times its mass. The solid gray lines represent the velocities of the two objects (the longer the line, the faster the object is moving). The dashed circles are for reference so that you can see that the orbits are ellipses, not circles.
 """
 
 
